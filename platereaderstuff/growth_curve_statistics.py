@@ -16,8 +16,6 @@ import pandas as pd
 import numpy as np
 from functools import reduce
 
-# TODO: 2) output technical replicates for superplots
-
 
 class WellPlate:
     def __init__(self, file: str, setup: str, noblank: bool):
@@ -100,14 +98,10 @@ class WellPlate:
     def split_technical_reps(self) -> list[pd.DataFrame]:
         groups = self.setup.groupby("Sample")
         unique_rep_counts = groups.size().unique()
-        if len(unique_rep_counts) == 1:
-            n_reps = unique_rep_counts[0]
-            technical_reps_setup = [groups.nth(i).reset_index() for i in range(n_reps)]
-        else:
-            print(
-                "Not all of your samples have the same number of technical replicates. Contact Cody to handle this. Exiting."
-            )
-            exit()
+
+        ## Note: need to have same number of technical replicates per plate
+        n_reps = unique_rep_counts[0]
+        technical_reps_setup = [groups.nth(i).reset_index() for i in range(n_reps)]
 
         time = self.tmpdata.Time
         technical_reps = [
@@ -125,13 +119,16 @@ class WellPlate:
             drop=True
         )
 
-    def prism_technical_reps(self):
+    def prism_technical_reps(self, droplog=False):
         combined = (
             self.combine_technical_reps()
             .assign(Sample_well=lambda x: x.Sample + "_" + x.Well)
             .drop(["Well", "Sample"], axis=1)
             .pivot(index="Time", columns="Sample_well")
         )
+
+        if droplog:
+            combined = combined.drop(columns=["logOD"])
 
         columns = [name[1] for name in combined.columns.to_flat_index().to_list()]
         combined.columns = columns
@@ -141,12 +138,10 @@ class WellPlate:
         data = self.data.drop(["Strain", "Media", "Concentration"], axis=1).pivot(
             index="Time", columns="Sample"
         )
-        # print(data.columns)
 
         columns = [
             f"{sample}_{val}" for val, sample in data.columns.to_flat_index().to_list()
         ]
-        # print(columns)
         data.columns = columns
         return data[sorted(data.columns)].reset_index()
 
@@ -299,8 +294,7 @@ class GrowthCurveAnalyzer:
         trep_summary.to_csv(
             f"{self.baseoutput}_statistical_summary_TECHNICAL_REPS.csv", index=False
         )
-
-        self.plate.prism_technical_reps().to_csv(
+        self.plate.prism_technical_reps(droplog=True).to_csv(
             f"{self.baseoutput}_TECHNICAL_REPLICATES.csv", index=False
         )
 
@@ -346,7 +340,7 @@ class GrowthCurveAnalyzer:
                 "maximum growth rate smoothed over 5 time intervals in units of lnOD/h",
             ),
             ("lag_time", "culture lag time in hours"),
-            ("doubling_time", "culture doubling time in units of 1/hour"),
+            ("doubling_time", "culture doubling time in units of hours"),
         ]
 
         with open(name, "w") as readme:
