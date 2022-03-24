@@ -460,7 +460,7 @@ class GrowthCurveAnalyzer:
 
         Args:
             data (pd.DataFrame): processed data from the WellPlate class
-            save (bool): _description_
+            save (bool): if saving output to file
             intervals (int, optional): number of time intervals to smooth data over.
                 Defaults to 5.
             technical_rep (bool, optional): if inputting a dataframe of only a single technical
