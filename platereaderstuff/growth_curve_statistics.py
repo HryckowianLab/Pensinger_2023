@@ -468,7 +468,8 @@ class GrowthCurveAnalyzer:
                 to drop that column. Defaults to False.
 
         Returns:
-            pd.DataFrame: _description_
+            pd.DataFrame: summary dataframe with above values
+                for each sample
         """
         max_ODs = self.get_max_column_value(data, "OD").rename(
             {"OD": "max_OD", "logOD": "max_logOD"}, axis=1
@@ -594,7 +595,7 @@ if __name__ == "__main__":
         "--noblank",
         default=False,
         action="store_true",
-        help="If you don't want to subtract the background. NOTE: must remove the background cells from your plate setup file that is passed to the -k flag. No blanking is actually the default currently, so this flag does nothing. If you want blanking, contact me.",
+        help="If you don't want to subtract the background. NOTE: must remove the background cells from your plate setup file that is passed to the -k flag. No blanking is actually the default currently, so this flag does nothing. If you want blanking, contact me...",
     )
     parser.add_argument(
         "--prism",
