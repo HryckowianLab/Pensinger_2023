@@ -5,8 +5,10 @@ Author: Cody Martin
         Department of Bacteriology
         Anantharaman lab
 
-Purpose: Generate summary statistics for growth curve data from 
-         Hryckowian plate reader (Gen5?)
+Purpose: Process plate reader growth curve data under different 
+         strain/media/concentration conditions. Additionally,
+         generate summary statistics. Plate reader = 
+         Hryckowian plate reader (Epoch 2, using Gen5 v3.10.06 software)  
 
 Usage: ./growth_curve_statistics.py -i <input.csv> -k <plate_setup.csv> -o <output_basename> [OPTIONS]
 """
@@ -34,14 +36,48 @@ class WellPlate:
             pass
 
     def read_data(self, file: str) -> pd.DataFrame:
+        """Read data file as dataframe
+
+        Args:
+            file (str): input .csv file with plate reader data
+
+        Returns:
+            pd.DataFrame
+        """
         return pd.read_csv(file)
 
     def read_setup(self, file: str) -> pd.DataFrame:
+        """Read plate setup file
+
+        Args:
+            file (str): setup file in .csv format
+                NOTE: must have the Row and column labels
+                and the Row column should be called 'Row'
+
+        Returns:
+            pd.DataFrame
+        """
         return pd.read_csv(file, index_col="Row")
 
     def parse_key(self, file: str) -> pd.DataFrame:
+        """Parse the plate setup dataframe to return a cleaner
+        dataframe that has the well coordinates for each sample
+
+        Args:
+            file (str): setup file in .csv format
+
+        Returns:
+            pd.DataFrame: data frame with the well coordinates
+                of each sample on the plate
+                NOTE: this will only parse samples included in
+                the setup file, so if there are samples that
+                should not be processed from a plate for whatever
+                reason, do not include them in the plate setup.
+        """
         setup = self.read_setup(file)
         coordinates = list()
+
+        # only parse cells that are not empty/blank
         for col, rowseries in setup.notna().iteritems():
             series = setup.loc[rowseries, col]
             if not series.empty:
@@ -53,6 +89,13 @@ class WellPlate:
         return pd.DataFrame(sample_coordinates, columns=["Sample", "Well"])
 
     def update_time(self):
+        """The Gen5 software likes to change the format
+        of the time when the run goes for longer than 24 hours.
+        The normal format is mm:ss but after 24 h becomes hh:mm:ss.
+
+        This standardizes the times, so that they can be made relative
+        to the first time point at t=0.
+        """
         time = pd.to_timedelta(
             np.where(
                 self.tmpdata.Time.str.count(":") == 1,
@@ -66,12 +109,31 @@ class WellPlate:
     def combine_metadata(
         self, tmpdata: pd.DataFrame, setup: pd.DataFrame
     ) -> pd.DataFrame:
+        """Combine the metadata from the parsed setup dataframe with the raw
+        data. In other words, for each sample in the parsed setup dataframe,
+        add the OD values.
+
+        Args:
+            tmpdata (pd.DataFrame): raw data from plate reader in .csv format
+            setup (pd.DataFrame): setup dataframe from self.parse_setup()
+
+        Returns:
+            pd.DataFrame: data frame with sample name, well coordinates, and OD
+                at all time points
+        """
         return tmpdata.melt(id_vars="Time", var_name="Well", value_name="OD").merge(
             setup, on="Well", how="right"
         )
 
     # TODO: add optional blanking
     def process(self) -> pd.DataFrame:
+        """For a single plate experiment, combine all the technical replicates
+        and summarize them with the mean and standard deviation.
+
+        Returns:
+            pd.DataFrame: summarized dataframe collapsing all technical replicates
+                for a given sample into only the mean and standard deviation
+        """
         data = self.combine_metadata(self.tmpdata, self.setup)
         processed_data = (
             data.groupby(["Time", "Sample"])
@@ -96,6 +158,24 @@ class WellPlate:
         )
 
     def split_technical_reps(self) -> list[pd.DataFrame]:
+        """Should you want to consider each technical replicate as
+        independent replicates, this will split up the combined metadata
+        output to split all the technical replicates into separate dataframes.
+
+        This allows the GrowthCurveAnalyzer class to take the same inputs as
+        with processing the data in terms of collapsing the technical replicates
+        into a single value.
+
+        NOTE: The way the splitting occurs requires that the same number of technical
+        replicates for each sample be used. In other words, for a single plate, all
+        samples should have 3 technical replicates for example (can be some other number
+        as long as all samples have the same number).
+
+        Returns:
+            list[pd.DataFrame]: list of dataframes where all technical replicates
+                for a given sample are split equally into each dataframe such that
+                no single dataframe contains the same sample more than once
+        """
         groups = self.setup.groupby("Sample")
         unique_rep_counts = groups.size().unique()
 
@@ -115,11 +195,28 @@ class WellPlate:
         ]
 
     def combine_technical_reps(self) -> pd.DataFrame:
+        """Row stack all the technical replicates back into a single dataframe.
+
+        Returns:
+            pd.DataFrame: data frame with all technical replicates collapsed into
+                one dataframe. Should be analogous to self.combine_metadata()
+        """
         return reduce(lambda x, y: pd.concat([x, y]), self.tech_reps).reset_index(
             drop=True
         )
 
-    def prism_technical_reps(self, droplog=False):
+    def prism_technical_reps(self, droplog=False) -> pd.DataFrame:
+        """Pivots the dataframe into a wide format that is more compatible with
+        use in GraphPad Prism
+
+        Args:
+            droplog (bool, optional): drop the logOD column if it exists.
+                Defaults to False.
+
+        Returns:
+            pd.DataFrame: wide data frame for exporting to prism
+                Each sample is additionally labeled by its well
+        """
         combined = (
             self.combine_technical_reps()
             .assign(Sample_well=lambda x: x.Sample + "_" + x.Well)
@@ -130,11 +227,21 @@ class WellPlate:
         if droplog:
             combined = combined.drop(columns=["logOD"])
 
+        # flatten multiindex column naming
         columns = [name[1] for name in combined.columns.to_flat_index().to_list()]
         combined.columns = columns
         return combined[sorted(combined.columns)].reset_index()
 
     def prism_output(self) -> pd.DataFrame:
+        """For the processed data that collapses technical replicates
+        into their mean/std, convert dataframe into wide format that
+        is more suitable to plotting in GraphPad Prism.
+
+        Returns:
+            pd.DataFrame: wide dataframe where each sample occupies two
+                columns, one for the mean OD and one for the stdev
+                at each time point
+        """
         data = self.data.drop(["Strain", "Media", "Concentration"], axis=1).pivot(
             index="Time", columns="Sample"
         )
@@ -161,6 +268,7 @@ class GrowthCurveAnalyzer:
 
         self.plate = WellPlate(file, setup, noblank)
 
+        # if users want the prism output of the data to plot in GraphPad Prism
         if prism:
             self.plate.prism_output().to_csv(
                 f"{self.baseoutput}_processed_data_PRISM.csv", index=False
@@ -168,9 +276,25 @@ class GrowthCurveAnalyzer:
         else:
             self.plate.data.to_csv(f"{self.baseoutput}_processed_data.csv", index=False)
 
+        # add natural log of OD for subsequent processing
         self.plate.data["logOD"] = np.log(self.plate.data.OD)
 
     def smooth_data(self, data: pd.DataFrame, column: str, intervals=5) -> pd.DataFrame:
+        """Smoothen a given column of data over n time intervals for all samples
+        using a rolling average over the n intervals. Each sample has its own data
+        smoothed independently of each other.
+
+        Args:
+            data (pd.DataFrame): processed data from the WellPlate class
+            column (str): column to smooth
+            intervals (int, optional): number of time intervals to smooth data over.
+                Defaults to 5.
+
+        Returns:
+            pd.DataFrame: copy of input data where column values for indicate
+                column have been smoothed. Should be otherwise identical to the
+                input data.
+        """
         return (
             data.groupby("Sample")[column]
             .rolling(intervals, min_periods=1)
@@ -182,15 +306,43 @@ class GrowthCurveAnalyzer:
     def get_max_column_value(
         self, data: pd.DataFrame, column: str, intervals=5
     ) -> pd.DataFrame:
+        """For a given column, calculate the max value AFTER smoothing.
+
+        Args:
+            data (pd.DataFrame): processed data from the WellPlate class
+            column (str): column to grab max value from
+            intervals (int, optional): number of time intervals to smooth data over.
+                Defaults to 5.
+
+        Returns:
+            pd.DataFrame: dataframe of max values of input column for ALL samples
+        """
         smoothed = self.smooth_data(data, column, intervals)
         argmax = smoothed.groupby("Sample").idxmax()[column]
         return data.loc[argmax.reset_index(drop=True)].copy()
 
     def growth_rate(self, data: pd.DataFrame) -> pd.DataFrame:
-        # the indices in the growth rates vectors are -1 compared to the actual sample/time indices
-        # this means that the argmax index from the growth rate
-        # corresponds to the time interval of
-        # (argmax, argmax + 1) states
+        """Calculate the growth rate for each sample as the differential
+        of the logOD over time for adjacent times. No smoothing applied here.
+
+        The indices in the growth rates vectors are -1 compared to the actual
+        sample/time indices, meaning that the index from the growth rate
+        corresponds to the time interval of (index, index + 1) states. This
+        time interval range will be included in the output.
+
+        NOTE: the units of growth rate are in lnOD/h. You cannot simply
+        do exp(lnOD/h) to get the data in OD/h. Best would be to look
+        at the time interval and choose the raw data points to do
+        that calculation.
+
+        Args:
+            data (pd.DataFrame): processed data from the WellPlate class
+
+        Returns:
+            pd.DataFrame: dataframe the bounds of the time interval and
+                corresponding growth rate
+        """
+
         g_rates = (
             data.groupby("Sample")
             .apply(lambda x: np.diff(x.logOD) / np.diff(x.Time))
@@ -198,6 +350,7 @@ class GrowthCurveAnalyzer:
             .rename({0: "growth_rate"}, axis=1)
         )
 
+        # create a tuple of the time intervals
         time_intervals = list()
         for t in data.Time.unique():
             try:
@@ -221,6 +374,19 @@ class GrowthCurveAnalyzer:
         )
 
     def max_growth_rate(self, data: pd.DataFrame, intervals=5) -> pd.DataFrame:
+        """Calculate the max growth rate for each sample with the growth
+        rate smoothed over n time intervals in units of lnOD/h.
+
+        Args:
+            data (pd.DataFrame): processed data from the WellPlate class
+            intervals (int, optional): number of time intervals to smooth data over.
+                Defaults to 5.
+
+        Returns:
+            pd.DataFrame: dataframe with the max growth rate for each sample
+                and the time interval for which the max growth rate occurs
+        """
+        # calculate growth rates and then smooth them
         growth_rates = (
             self.growth_rate(data)
             .groupby("Sample")
@@ -229,12 +395,29 @@ class GrowthCurveAnalyzer:
             .reset_index()
             .drop("level_1", axis=1)
         )
-        # max_grates = growth_rates.groupby("Sample").growth_rate.max().reset_index()
+
+        # get the index of the max growth rate for each sample
         argmax = growth_rates.groupby("Sample").idxmax().growth_rate
 
+        # return the actual max growth rate values
         return growth_rates.loc[argmax.reset_index(drop=True)]
 
     def lag_time(self, data: pd.DataFrame, intervals=5) -> pd.DataFrame:
+        """Calculate lag time as defined as half time to the max
+        growth rate. Since the time at the max growth rate corresponds
+        to an interval, the midpoint of the interval is used as the
+        time at the max growth rate, then divided by two.
+
+        Data are smoothed over n time intervals.
+
+        Args:
+            data (pd.DataFrame): processed data from the WellPlate class
+            intervals (int, optional): number of time intervals to smooth data over.
+                Defaults to 5.
+
+        Returns:
+            pd.DataFrame: dataframe with lagtime in units of hrs for each sample
+        """
         # use midpoint of time interval to set a single time as the max
         max_growth_rates = self.max_growth_rate(data, intervals).assign(
             lag_time=lambda x: (x.t1 + (x.t2 - x.t1) / 2) / 2
@@ -242,6 +425,18 @@ class GrowthCurveAnalyzer:
         return max_growth_rates
 
     def doubling_time(self, data: pd.DataFrame, intervals=5) -> pd.DataFrame:
+        """Calculate doubling time as defined as ln(2) / max_growth_rate for
+        each sample. Data are smoothed over n time intervals.
+
+        Args:
+            data (pd.DataFrame): processed data from the WellPlate class
+            intervals (int, optional): number of time intervals to smooth data over.
+                Defaults to 5.
+
+        Returns:
+            pd.DataFrame: dataframe with doubling time in units of hours
+                for each sample
+        """
         log2 = np.log(2)
         return self.max_growth_rate(data, intervals).assign(
             doubling_time=lambda x: log2 / x.growth_rate
@@ -250,6 +445,31 @@ class GrowthCurveAnalyzer:
     def summary(
         self, data: pd.DataFrame, save: bool, intervals=5, technical_rep=False
     ) -> pd.DataFrame:
+        """Calculate the following summary statistics for each sample
+        and output them to a dataframe to save:
+            - max OD
+            - max lnOD
+            - final OD
+            - final lnOD
+            - max growth rate
+            - lag time
+            - doubling time
+
+        See README.txt file that is generated for more explanation of units and how
+        values are calculated.
+
+        Args:
+            data (pd.DataFrame): processed data from the WellPlate class
+            save (bool): _description_
+            intervals (int, optional): number of time intervals to smooth data over.
+                Defaults to 5.
+            technical_rep (bool, optional): if inputting a dataframe of only a single technical
+                replicate, there will be no standard deviation column, so this prevents trying
+                to drop that column. Defaults to False.
+
+        Returns:
+            pd.DataFrame: _description_
+        """
         max_ODs = self.get_max_column_value(data, "OD").rename(
             {"OD": "max_OD", "logOD": "max_logOD"}, axis=1
         )
@@ -278,6 +498,12 @@ class GrowthCurveAnalyzer:
         return summary_df
 
     def summarize_technical_replicates(self):
+        """If wanting to process individual technical replicates instead
+        of collapsing them into the mean of technical replicates, this
+        will setup passing the list of individual technical replicates
+        from WellPlate.tech_reps into the GrowthCurveAnalyzer.summary
+        function.
+        """
         for trep in self.plate.tech_reps:
             trep["logOD"] = np.log(trep.OD)
 
@@ -355,7 +581,7 @@ class GrowthCurveAnalyzer:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Process growth curve data and calculate summary statistics"
+        description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
         "-i", "--input", required=True, type=str, help="input file in .csv"
