@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+DESCRIPTION = """
 Author: Cody Martin
         University of Wisconsin-Madison
         Department of Bacteriology
@@ -352,47 +352,6 @@ class GrowthCurveAnalyzer:
             for col, desc in stat_summary_metadata:
                 readme.write(f"{col:16s}{desc}\n")
 
-    def plot(self):
-        # there's a bug in here...
-        import matplotlib.pyplot as plt
-        from matplotlib.ticker import ScalarFormatter
-        import seaborn as sns
-
-        fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharey="row")
-        for ax, (strain, data) in zip(axes, self.plate.data.groupby("Strain")):
-            sns.lineplot(
-                x="Time",
-                y="OD",
-                hue="Concentration",
-                style="Media",
-                linewidth=4,
-                ci=None,
-                data=data,
-                ax=ax,
-            )
-            ax.tick_params(
-                axis="both",
-                which="both",
-                direction="in",
-                top=True,
-                right=True,
-            )
-            ax.set(
-                xlabel="Time post inoculation (h)",
-                yscale="log",
-                ylim=(0.05, 1),
-                title=strain,
-            )
-            ax.xaxis.set_minor_locator(plt.MultipleLocator(1))
-
-        axes[0].yaxis.set_major_formatter(ScalarFormatter())
-        axes[0].set_ylabel("OD$_{600}$")
-        axes[0].legend(frameon=False, title="Concentration (mM)")
-        axes[1].get_legend().remove()
-
-        fig.tight_layout()
-        fig.savefig(f"{self.baseoutput}.pdf")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -418,12 +377,6 @@ if __name__ == "__main__":
         help="use if you want processed data output compatible with GraphPad Prism",
     )
     parser.add_argument(
-        "--plot",
-        default=False,
-        action="store_true",
-        help="if you want to see a plot example",
-    )
-    parser.add_argument(
         "--readme_name",
         default="README.txt",
         help="name of readme file for metadata information, default=%(default)s",
@@ -447,8 +400,5 @@ if __name__ == "__main__":
 
     if not args.ignore_treps:
         analyzer.summarize_technical_replicates()
-
-    if args.plot:
-        analyzer.plot()
 
     analyzer.write_readme(args.readme_name)
