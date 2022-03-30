@@ -3,6 +3,7 @@
 + University of Wisconsin-Madison
 + Department of Bacteriology
 + Anantharaman lab
++ Script created for Pensinger et al. 2022.
 
 # Getting started
 ## Prepare input data
@@ -35,7 +36,7 @@
 1) `-i`: input data file in `.csv` format. See above for requirements.
 2) `-k`: input plate reader setup file. See above for requirements.
 3) `-o`: output basename that will be part of the all files generated.
-4) `--noblank`: This *should* prevent background subtraction (ie blank media subtracted from the culture ODs) when processing the data. However, blanking was never implemented since growth curve shape statistics (max growth rate, lag time, doubling time, etc) should be unaffected by blanking (which is just a shift in values). Note: this does, however, mean that the reported OD values are not absolute values.
+4) `--noblank`: This *should* prevent background subtraction (ie blank media subtracted from the culture ODs) when processing the data. However, blanking was never implemented since growth curve shape statistics (max growth rate, lag time, doubling time, etc) should be unaffected by blanking (which is just a shift in values). Note: this does, however, mean that the reported OD values are not absolute values. Additionally, this means that this argument does nothing.
 5) `--prism`: This forces the output processed data to be in a wide format that is more compatible with manual plotting in GraphPad Prism software. Do not use this command if you want to plot data with a programming language such as python or R as the processed data will be exported to a long format that is more suitable for these situations.
 6) `--readme_name`: A `README.txt` file is generated every time the script is run that details the specifics of the values reported in each of the output files. This argument can be used to change the default name of this file from `README.txt` to another name if that file already exists.
 7) `--ignore_treps`: Use this if you want to ignore individually processing technical replicates by themselves. **For the purposes of using this script**, the definition of technical replicates is the replicate samples within the *same* plate on the *same* day. This will result in only processing data at a biological replicate level, which I define as the average of technical replicates from a given day's experiment.
@@ -58,3 +59,6 @@
  1) The above steps are performed, except treating each technical replicate as an independent unit. In other words, no summarizing the replicate samples from the same plate is performed. Otherwise, the same steps are performed *per sample per technical replicate*.
  2) This type of processing can be turned off using the `--ignore_treps` argument.
 
+# Final details
+- In the manuscript, the script was used in this format for all data processed:
+- `./growth_curve_statistics.py -i <data.csv> -k <plate_setup.csv> -o <output_basename> --noblank --prism`
