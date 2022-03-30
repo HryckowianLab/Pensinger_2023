@@ -8,7 +8,8 @@
 # Getting started
 ## Prepare input data
 1) Data exported from plate reader software must be in comma-delimited format (`.csv`) and only consist of the raw data table with the column headers. In Excel, you should remove additional metadata and export *only* the raw data table as a `.csv` file. See `example_data.csv` provided here as the example data set used in the manuscript.
-   1) Notice that the column labels are `Time` and the well coordinates. If your plate reader does not outputthe data in this format, it will need to be converted to this format.
+   1) Notice that the column labels are `Time` and the well coordinates. If your plate reader does not output the data in this format, it will need to be converted to this format.
+   2) Additionally, notice the times are in `mm:ss` format or `hh:mm:ss` format. This is required for input but will be converted to `h` relative times, with the first time being 0.
 2) A comma-delimited file for the plate setup is required. See `plate_setup.csv` provided here. The columns must be labeled first with `Row` and then the numbers 1-12, corresponding to the setup of a conventional 96-wellplate. The column beneath `Row` should be `A-H`, again corresponding to the rows of a 96-wellplate. The values in the cells are the names of the samples.
    1) Wells that should not be analyzed (either no samples were present or samples that are not part of this analysis) should be left **BLANK**.
    2) For this analysis in particular, the format of the sample name is as follows: `STRAIN_MEDIA_CONCENTRATION`. It is imperative that this format be followed here for this script to work.
