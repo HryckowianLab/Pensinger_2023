@@ -46,7 +46,7 @@
 ### Biological replicates
 1) See above for my definition of biological replicate I use.
 2) For biological replicate level processing, all (technical) replicates for each sample are summarized at every time point by the mean and standard deviation.
-3) To calculate summary metrics, including final OD, max growth rate, lag time, and doubling time, the data are smoothed with a rolling average over 5 time intervals to minimize variability inherent with plate reader measurements. For the data in this manuscript, this corresponds to 150-min intervals. Here is a summary of the workflow for *each* strain:
+3) To calculate summary metrics, including final OD, max growth rate, lag time, and doubling time, the data are smoothed with a rolling average over 5 time intervals to minimize variability inherent with plate reader measurements. For the data in this manuscript, this corresponds to 150-min intervals. Here is a summary of the workflow for *each group of samples* (ie unique combinations of strain, media, and media concentration):
    1) Final OD: take the average of the final 5 OD values (150 min)
    2) Max growth rate: the growth rate at every adjacent pair of time intervals <img src="https://render.githubusercontent.com/render/math?math=%24(t_1%2C%20t_2)%24"> is calculated as: 
       1) <img src="https://render.githubusercontent.com/render/math?math=%24%5Cfrac%7B%5Clog(OD_2)%20-%20%5Clog(OD_1)%7D%7Bt_2%20-%20t_1%7D%24">
