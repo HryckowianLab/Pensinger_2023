@@ -48,13 +48,13 @@
 2) For biological replicate level processing, all (technical) replicates for each sample are summarized at every time point by the mean and standard deviation.
 3) To calculate summary metrics, including final OD, max growth rate, lag time, and doubling time, the data are smoothed with a rolling average over 5 time intervals to minimize variability inherent with plate reader measurements. For the data in this manuscript, this corresponds to 150-min intervals. Here is a summary of the workflow for *each* strain:
    1) Final OD: take the average of the final 5 OD values (150 min)
-   2) Max growth rate: the growth rate at every adjacent pair of time intervals $(t_1, t_2)$ is calculated as: 
-      1) $\frac{\log(OD_2) - \log(OD_1)}{t_2 - t_1}$
+   2) Max growth rate: the growth rate at every adjacent pair of time intervals <img src="https://render.githubusercontent.com/render/math?math=%24(t_1%2C%20t_2)%24"> is calculated as: 
+      1) <img src="https://render.githubusercontent.com/render/math?math=%24%5Cfrac%7B%5Clog(OD_2)%20-%20%5Clog(OD_1)%7D%7Bt_2%20-%20t_1%7D%24">
       2) Then the max growth rate was defined as the as the max growth rate over a rolling average of 5 time intervals (150 min).
       3) The max growth rate is, therefore, calculated from an approximated slope and is not necessarily the instantaneous max growth rate.
-   3) Lag time: Since the max growth rate corresponds to a time interval with the max rate of growth (and not an instantaneous time), the midpoint of the time interval with the max growth rate was used to calculate lag time: $t_{max} = \frac{t_1 + t_2}{2}$. Lag time is defined as half the time to reach the max growth rate: $t_{lag} = \frac{t_{max}}{2}$.
-   4) Doubling time: $\frac{\log(2)}{M}$, where $M$ is the max growth rate as determined above.
-   5) Note: in all mentions of $\log$, this corresponds to the natural log.
+   3) Lag time: Since the max growth rate corresponds to a time interval with the max rate of growth (and not an instantaneous time), the midpoint of the time interval with the max growth rate was used to calculate lag time: <img src="https://render.githubusercontent.com/render/math?math=%24t_%7Bmax%7D%20%3D%20%5Cfrac%7Bt_%7B1%2Cmax%7D%20%2B%20t_%7B2%2Cmax%7D%7D%7B2%7D%24">. Lag time is defined as half the time to reach the max growth rate: <img src="https://render.githubusercontent.com/render/math?math=%24t_%7Blag%7D%20%3D%20%5Cfrac%7Bt_%7Bmax%7D%7D%7B2%7D%24">.
+   4) Doubling time: <img src="https://render.githubusercontent.com/render/math?math=%24%5Cfrac%7B%5Clog(2)%7D%7BM%7D%24">, where <img src="https://render.githubusercontent.com/render/math?math=%24M%24"> is the max growth rate as determined above.
+   5) Note: in all mentions of <img src="https://render.githubusercontent.com/render/math?math=%24%5Clog%24">, this corresponds to the natural log.
 4) Processing the data in this biological replicate-centric manner is the default for this script and cannot be turned off.
  ### Technical replicates
  1) The above steps are performed, except treating each technical replicate as an independent unit. In other words, no summarizing the replicate samples from the same plate is performed. Otherwise, the same steps are performed *per sample per technical replicate*.
