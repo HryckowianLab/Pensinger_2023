@@ -3,7 +3,7 @@
 + University of Wisconsin-Madison
 + Department of Bacteriology
 + Anantharaman lab
-+ Script created for Pensinger et al. 2022.
++ Script created for Pensinger et al. 2023.
 
 # Getting started
 ## Prepare input data
@@ -17,7 +17,7 @@
 3) Finally, ensure that the `growth_curve_statistics.py`, the data, and the plate setup files are in the same directory. This will make things easier...
 ## Prepare virtual environment to run script
 1) Clone this repository:
-   `git clone git@github.com:HryckowianLab/Pensinger_2022.git`
+   `git clone git@github.com:HryckowianLab/Pensinger_2023.git`
 2) If you don't have conda, please install it from here: https://docs.conda.io/en/latest/miniconda.html. Then, create a conda environment: 
    `conda create -n platereader -c conda-forge python=3.10.2 numpy=1.22.2 pandas=1.4.1`
 3) Next, activate the conda environment that was just created called `platereader`:
