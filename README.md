@@ -5,6 +5,11 @@
 + Anantharaman lab
 + Script created for Pensinger et al. 2023.
 
+# Updates 2023-06-19:
++ Changed dependency versions:
+  + `pandas == 2.0`
+  + `numpy == 1.24`
+
 # Getting started
 ## Prepare input data
 1) Data exported from plate reader software must be in comma-delimited format (`.csv`) and only consist of the raw data table with the column headers. In Excel, you should remove additional metadata and export *only* the raw data table as a `.csv` file. See `example_data.csv` provided here as the example data set used in the manuscript.
@@ -12,14 +17,14 @@
    2) Additionally, notice the times are in `mm:ss` format or `hh:mm:ss` format. This is required for input but will be converted to `h` relative times, with the first time being 0.
 2) A comma-delimited file for the plate setup is required. See `plate_setup.csv` provided here. The columns must be labeled first with `Row` and then the numbers 1-12, corresponding to the setup of a conventional 96-wellplate. The column beneath `Row` should be `A-H`, again corresponding to the rows of a 96-wellplate. The values in the cells are the names of the samples.
    1) Wells that should not be analyzed (either no samples were present or samples that are not part of this analysis) should be left **BLANK**.
-   2) For this analysis in particular, the format of the sample name is as follows: `STRAIN_MEDIA_CONCENTRATION`. It is imperative that this format be followed here for this script to work.
+   2) For this analysis in particular, the format of the sample name is as follows: `STRAIN_MEDIA_CONCENTRATION`. However, this can be modified using the `-c` flag, ie `-c Strain Drug`
    3) Be sure to name all replicates the **EXACT** same way with no additional spaces or other characters. Do not label them with incrementing numbers either.
 3) Finally, ensure that the `growth_curve_statistics.py`, the data, and the plate setup files are in the same directory. This will make things easier...
 ## Prepare virtual environment to run script
 1) Clone this repository:
    `git clone git@github.com:HryckowianLab/Pensinger_2023.git`
 2) If you don't have conda, please install it from here: https://docs.conda.io/en/latest/miniconda.html. Then, create a conda environment: 
-   `conda create -n platereader -c conda-forge python=3.10.2 numpy=1.22.2 pandas=1.4.1`
+   `conda create -n platereader -c conda-forge python=3.10 numpy=1.24 pandas=2.0`
 3) Next, activate the conda environment that was just created called `platereader`:
    `conda activate platereader`
 
@@ -37,10 +42,12 @@
 1) `-i`: input data file in `.csv` format. See above for requirements.
 2) `-k`: input plate reader setup file. See above for requirements.
 3) `-o`: output basename that will be part of the all files generated.
-4) `--noblank`: This *should* prevent background subtraction (ie blank media subtracted from the culture ODs) when processing the data. However, blanking was never implemented since growth curve shape statistics (max growth rate, lag time, doubling time, etc) should be unaffected by blanking (which is just a shift in values). Note: this does, however, mean that the reported OD values are not absolute values. Additionally, this means that this argument does nothing.
-5) `--prism`: This forces the output processed data to be in a wide format that is more compatible with manual plotting in GraphPad Prism software. Do not use this command if you want to plot data with a programming language such as python or R as the processed data will be exported to a long format that is more suitable for these situations.
-6) `--readme_name`: A `README.txt` file is generated every time the script is run that details the specifics of the values reported in each of the output files. This argument can be used to change the default name of this file from `README.txt` to another name if that file already exists.
-7) `--ignore_treps`: Use this if you want to ignore individually processing technical replicates by themselves. **For the purposes of using this script**, the definition of technical replicates is the replicate samples within the *same* plate on the *same* day. This will result in only processing data at a biological replicate level, which I define as the average of technical replicates from a given day's experiment.
+4) `--prism`: This forces the output processed data to be in a wide format that is more compatible with manual plotting in GraphPad Prism software. Do not use this command if you want to plot data with a programming language such as python or R as the processed data will be exported to a long format that is more suitable for these situations.
+5) `--readme`: A `README.txt` file is generated every time the script is run that details the specifics of the values reported in each of the output files. This argument can be used to change the default name of this file from `README.txt` to another name if that file already exists.
+6) `--average_replicates`: Use this if you want to ignore individually processing technical replicates by themselves. **For the purposes of using this script**, the definition of technical replicates is the replicate samples within the *same* plate on the *same* day. This will result in only processing data at a biological replicate level, which I define as the average of technical replicates from a given day's experiment.
+7) `-c`: specify the how the sample labels in the `-k` file correspond to experimental conditions. For example, suppose the key file has a sample name like this: `MG1655_10`, which corresponds to the condition `Strain_Concentration`. Then you would input `-c Strain Concentration`
+8) `-d`: specify the delimiter used to separate experimental conditions as defined by `-c` and labeled in the `-k` key file
+9) `-w`: use to adjust the window size when smoothening data with a rolling average. A value of `-w=1` corresponds to **no smoothening**. It is recommended to lower this value if the log phase is not sampled very frequently.
 
 ## What does the script do:
 ### Biological replicates
@@ -62,4 +69,4 @@
 
 # Final details
 - In the manuscript, the script was used in this format for all data processed:
-- `./growth_curve_statistics.py -i <data.csv> -k <plate_setup.csv> -o <output_basename> --noblank --prism`
+- `./growth_curve_statistics.py -i <data.csv> -k <plate_setup.csv> -o <output_basename> --prism`
